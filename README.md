@@ -76,5 +76,7 @@ If your CM4 login user is not `cm4`, edit the `User=`, `Group=`, `WorkingDirecto
 ## Monitoring
 
 - `GET /api/health` returns a simple remote health summary
+- `GET /api/discovery` returns the exact detected camera list
 - `GET /api/version` returns the build label and git sha
 - The home page footer also shows the current build
+- `cm4-v3link-healthcheck` exits non-zero if the API health check fails

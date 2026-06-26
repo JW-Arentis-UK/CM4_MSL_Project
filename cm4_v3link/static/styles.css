@@ -83,6 +83,11 @@ h1 {
   color: var(--muted);
 }
 
+.health-line {
+  margin: 0;
+  color: var(--accent-2);
+}
+
 .label {
   color: var(--muted);
   font-size: 0.85rem;
@@ -185,6 +190,10 @@ select, input {
   margin-top: 10px;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.hero-card strong {
+  font-size: 1.1rem;
 }
 
 .form {

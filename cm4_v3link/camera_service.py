@@ -78,11 +78,15 @@ class CameraService:
         self._refresh_discovery()
         return {
             "cameras": [self._make_state(slot).to_dict() for slot in self._slot_order()],
-            "detected_cameras": [
-                {"camera_id": camera.camera_id, "name": camera.name, "index": camera.index}
-                for camera in self.detected
-            ],
+            "detected_cameras": self.discovery(),
         }
+
+    def discovery(self) -> list[dict[str, Any]]:
+        self._refresh_discovery()
+        return [
+            {"camera_id": camera.camera_id, "name": camera.name, "index": camera.index}
+            for camera in self.detected
+        ]
 
     def get_camera(self, slot: str) -> CameraRuntimeState:
         self._refresh_discovery()
@@ -181,6 +185,7 @@ class CameraService:
             "backend": self.backend.__class__.__name__,
             "config_path": str(self.config_store.path),
             "detected_count": len(self.detected),
+            "detected_cameras": self.discovery(),
             "camera_statuses": {camera.slot: camera.status for camera in cameras},
         }
 

@@ -71,6 +71,17 @@ function renderCameraCards() {
   }
 }
 
+function renderHealthSummary(health) {
+  const detected = health?.detected_cameras?.length ?? 0;
+  const backend = health?.backend ?? "unknown";
+  const configPath = health?.config_path ?? "unknown";
+  const camera0 = health?.camera_statuses?.camera_0 ?? "unknown";
+  el("health-summary").textContent = `backend ${backend}, ${detected} detected, camera_0 ${camera0}`;
+  el("status-summary").textContent = `${cameraList()
+    .map((camera) => `${camera.slot}: ${camera.status}`)
+    .join(" | ")} | config ${configPath}`;
+}
+
 function fillSettingsForm() {
   const camera = slotToState(state.settingsSlot);
   if (!camera) return;
@@ -131,7 +142,7 @@ async function loadStatus() {
       ? "Ready"
       : "Waiting for camera";
   el("overall-status").textContent = overall;
-  el("status-summary").textContent = cameras.map((camera) => `${camera.slot}: ${camera.status}`).join(" | ");
+  renderHealthSummary(state.status);
 }
 
 async function loadLogs() {
@@ -153,6 +164,14 @@ async function loadVersion() {
     el("build-version").textContent = version.label;
     el("footer-build").textContent = version.label;
   }
+}
+
+async function loadHealth() {
+  const health = await fetchJson("/api/health");
+  renderHealthSummary({
+    ...health,
+    detected_cameras: health.detected_cameras ?? [],
+  });
 }
 
 function startPreviewTimer() {
@@ -258,10 +277,12 @@ async function boot() {
   wireEvents();
   await loadVersion();
   await loadStatus();
+  await loadHealth();
   await loadLogs();
   startPreviewTimer();
   window.setInterval(() => {
     loadStatus().catch(console.error);
+    loadHealth().catch(console.error);
     loadLogs().catch(console.error);
   }, 5000);
 }

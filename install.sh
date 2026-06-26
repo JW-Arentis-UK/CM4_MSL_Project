@@ -18,3 +18,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now cm4-v3link
 sudo systemctl status --no-pager cm4-v3link
 
+echo
+echo "Health check:"
+echo "  cm4-v3link-healthcheck"

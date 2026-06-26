@@ -46,6 +46,10 @@ def create_app() -> FastAPI:
     def api_cameras() -> dict:
         return {**service.get_status(), "build": build_info.to_dict()}
 
+    @app.get("/api/discovery")
+    def api_discovery() -> dict:
+        return {"build": build_info.to_dict(), "cameras": service.discovery()}
+
     @app.get("/api/cameras/{slot}")
     def api_camera(slot: str) -> dict:
         try:
