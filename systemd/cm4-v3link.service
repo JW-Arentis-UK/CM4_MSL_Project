@@ -2,6 +2,8 @@
 Description=CM4 V3Link Camera Control Tool
 Wants=network-online.target
 After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=10
 
 [Service]
 Type=simple
@@ -12,9 +14,6 @@ ExecStart=/home/cm4/cm4-v3link/.venv/bin/python -m cm4_v3link
 Environment=PYTHONUNBUFFERED=1
 Restart=always
 RestartSec=5
-StartLimitIntervalSec=60
-StartLimitBurst=10
 
 [Install]
 WantedBy=multi-user.target
-
