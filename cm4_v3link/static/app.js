@@ -4,6 +4,7 @@ const state = {
   previewSlot: "camera_0",
   settingsSlot: "camera_0",
   previewTimer: null,
+  previewLoading: false,
   build: null,
 };
 
@@ -18,6 +19,8 @@ function slotToState(slot) {
 }
 
 function setPreviewImage(src) {
+  state.previewLoading = true;
+  el("health-summary").textContent = "loading preview frame...";
   el("preview-image").src = src;
 }
 
@@ -78,7 +81,9 @@ function renderHealthSummary(health) {
   const backend = health?.backend ?? "unknown";
   const configPath = health?.config_path ?? "unknown";
   const camera0 = health?.camera_statuses?.camera_0 ?? "unknown";
-  el("health-summary").textContent = `backend ${backend}, ${detected} detected, camera_0 ${camera0}`;
+  if (!state.previewLoading) {
+    el("health-summary").textContent = `backend ${backend}, ${detected} detected, camera_0 ${camera0}`;
+  }
   el("status-summary").textContent = `${cameraList()
     .map((camera) => `${camera.slot}: ${camera.status}`)
     .join(" | ")} | config ${configPath}`;
@@ -176,13 +181,28 @@ async function loadHealth() {
   });
 }
 
+function wirePreviewEvents() {
+  const preview = el("preview-image");
+  preview.addEventListener("load", () => {
+    state.previewLoading = false;
+    const slot = el("preview-slot").value;
+    const camera = slotToState(slot);
+    const label = camera?.detected_name ?? slot ?? "camera";
+    el("health-summary").textContent = `preview frame loaded from ${label}`;
+  });
+  preview.addEventListener("error", () => {
+    state.previewLoading = false;
+    el("health-summary").textContent = "preview frame failed to load";
+  });
+}
+
 function startPreviewTimer() {
   stopPreviewTimer();
   state.previewTimer = window.setInterval(() => {
     const slot = el("preview-slot").value;
     if (!slot) return;
     setPreviewImage(`/api/cameras/${slot}/preview/frame?ts=${Date.now()}`);
-  }, 1500);
+  }, 4000);
 }
 
 function stopPreviewTimer() {
@@ -276,6 +296,7 @@ function wireEvents() {
 }
 
 async function boot() {
+  wirePreviewEvents();
   wireEvents();
   await loadVersion();
   await loadStatus();

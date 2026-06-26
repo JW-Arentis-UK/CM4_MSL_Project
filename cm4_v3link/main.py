@@ -75,14 +75,28 @@ def create_app() -> FastAPI:
         except RuntimeError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         if snapshot.bytes_data is not None:
-            return Response(content=snapshot.bytes_data, media_type=snapshot.content_type)
+            return Response(
+                content=snapshot.bytes_data,
+                media_type=snapshot.content_type,
+                headers={
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Pragma": "no-cache",
+                },
+            )
         if snapshot.path is not None:
             data = snapshot.path.read_bytes()
             try:
                 snapshot.path.unlink(missing_ok=True)
             except Exception:
                 pass
-            return Response(content=data, media_type=snapshot.content_type)
+            return Response(
+                content=data,
+                media_type=snapshot.content_type,
+                headers={
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Pragma": "no-cache",
+                },
+            )
         raise HTTPException(status_code=500, detail="Snapshot failed.")
 
     @app.get("/api/cameras/{slot}/preview/frame")
@@ -93,7 +107,14 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail="Unknown camera slot.") from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        return Response(content=frame, media_type="image/jpeg")
+        return Response(
+            content=frame,
+            media_type="image/jpeg",
+            headers={
+                "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+            },
+        )
 
     @app.post("/api/cameras/{slot}/preview/start")
     def api_preview_start(slot: str) -> dict:
