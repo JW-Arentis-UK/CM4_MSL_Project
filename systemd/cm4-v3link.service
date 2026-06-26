@@ -1,0 +1,16 @@
+[Unit]
+Description=CM4 V3Link Camera Control Tool
+After=network.target
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+Environment=CM4_V3LINK_CONFIG=/var/lib/cm4-v3link/cameras.json
+WorkingDirectory=/opt/cm4-v3link
+ExecStart=/usr/bin/python3 -m cm4_v3link
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

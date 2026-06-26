@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">CM4 V3Link control</p>
+          <h1>{{ title }}</h1>
+          <p class="lede">Slot-based camera access, simple preview polling, snapshots, and saved settings.</p>
+        </div>
+        <div class="hero-card">
+          <span class="label">Status</span>
+          <strong id="overall-status">Loading...</strong>
+          <p id="status-summary">Checking camera discovery.</p>
+        </div>
+      </header>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Preview</h2>
+            <select id="preview-slot"></select>
+          </div>
+          <div class="preview-frame">
+            <img id="preview-image" alt="Camera preview" />
+          </div>
+          <div class="actions">
+            <button id="start-preview">Start preview</button>
+            <button id="stop-preview" class="secondary">Stop preview</button>
+            <button id="snapshot" class="secondary">Snapshot</button>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Slots</h2>
+            <button id="save-config" class="secondary">Save config</button>
+          </div>
+          <div id="camera-list" class="camera-list"></div>
+        </article>
+      </section>
+
+      <section class="grid lower">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Settings</h2>
+            <select id="settings-slot"></select>
+          </div>
+          <form id="settings-form" class="form">
+            <label>Name <input name="name" /></label>
+            <label><span>Enabled</span><input name="enabled" type="checkbox" /></label>
+            <label>Resolution <input name="resolution" /></label>
+            <label>FPS <input name="fps" type="number" min="1" /></label>
+            <label>Exposure <input name="exposure" /></label>
+            <label>Gain <input name="gain" /></label>
+            <label>EV <input name="ev_compensation" type="number" /></label>
+            <label>Brightness <input name="brightness" type="number" step="0.1" /></label>
+            <label>Contrast <input name="contrast" type="number" step="0.1" /></label>
+            <label>Saturation <input name="saturation" type="number" step="0.1" /></label>
+            <label>Sharpness <input name="sharpness" type="number" step="0.1" /></label>
+            <label><span>Flip</span><input name="flip" type="checkbox" /></label>
+            <label>Rotate <input name="rotate" type="number" step="90" /></label>
+          </form>
+          <div class="actions">
+            <button id="apply-settings">Apply settings</button>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Logs</h2>
+            <button id="refresh-logs" class="secondary">Refresh</button>
+          </div>
+          <div id="log-list" class="log-list"></div>
+        </article>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+
