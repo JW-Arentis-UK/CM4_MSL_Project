@@ -35,5 +35,32 @@ set CM4_V3LINK_CONFIG=C:\path\to\cameras.json
 
 ## systemd
 
-Install the unit from [`systemd/cm4-v3link.service`](./systemd/cm4-v3link.service) and set `CM4_V3LINK_CONFIG` to a writable path such as `/var/lib/cm4-v3link/cameras.json`.
+For the quickest single-install setup, clone the repo into your home folder and keep the app, venv, config, and service all in one place.
 
+```bash
+cd ~
+git clone https://github.com/JW-Arentis-UK/CM4_MSL_Project.git cm4-v3link
+cd cm4-v3link
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+Then install the systemd unit from [`systemd/cm4-v3link.service`](./systemd/cm4-v3link.service):
+
+```bash
+sudo cp systemd/cm4-v3link.service /etc/systemd/system/cm4-v3link.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now cm4-v3link
+sudo systemctl status cm4-v3link
+```
+
+Logs go to the journal:
+
+```bash
+journalctl -u cm4-v3link -f
+```
+
+The service is configured to restart automatically and uses the repo-local `config/cameras.json` file for persistent settings.
+
+If your CM4 login user is not `cm4`, edit the `User=`, `Group=`, `WorkingDirectory=`, and `ExecStart=` lines in the unit to match your home folder.

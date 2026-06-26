@@ -1,15 +1,19 @@
 [Unit]
 Description=CM4 V3Link Camera Control Tool
-After=network.target
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=simple
+User=cm4
+Group=cm4
+WorkingDirectory=/home/cm4/cm4-v3link
+ExecStart=/home/cm4/cm4-v3link/.venv/bin/python -m cm4_v3link
 Environment=PYTHONUNBUFFERED=1
-Environment=CM4_V3LINK_CONFIG=/var/lib/cm4-v3link/cameras.json
-WorkingDirectory=/opt/cm4-v3link
-ExecStart=/usr/bin/python3 -m cm4_v3link
-Restart=on-failure
+Restart=always
 RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=10
 
 [Install]
 WantedBy=multi-user.target
