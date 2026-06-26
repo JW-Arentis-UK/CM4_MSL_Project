@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
@@ -35,10 +36,22 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    try:
-        data = fetch(args.url)
-    except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
-        log_watchdog(f"healthcheck fetch error: {exc}")
+    data = None
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            data = fetch(args.url)
+            break
+        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if attempt < 2:
+                time.sleep(1)
+            else:
+                log_watchdog(f"healthcheck fetch error: {exc}")
+                return 2
+
+    if data is None:
+        log_watchdog(f"healthcheck fetch error: {last_error}")
         return 2
 
     if not data.get("healthy"):
@@ -65,4 +78,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
