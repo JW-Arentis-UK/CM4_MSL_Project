@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import subprocess
 import sys
 from pathlib import Path
@@ -17,10 +18,24 @@ def main() -> int:
         return 2
 
     try:
+        run(["sudo", "systemctl", "stop", "cm4-v3link-healthcheck.timer"], cwd=repo_root)
         run(["git", "pull"], cwd=repo_root)
         run([str(venv_python), "-m", "pip", "install", "-e", str(repo_root)], cwd=repo_root)
         run(["sudo", "systemctl", "restart", "cm4-v3link"], cwd=repo_root)
-        run(["sudo", "systemctl", "restart", "cm4-v3link-healthcheck.timer"], cwd=repo_root)
+
+        for _ in range(30):
+            result = subprocess.run(
+                ["systemctl", "is-active", "--quiet", "cm4-v3link"],
+                cwd=repo_root,
+            )
+            if result.returncode == 0:
+                break
+            time.sleep(1)
+        else:
+            print("update failed: cm4-v3link did not become active", file=sys.stderr)
+            return 2
+
+        run(["sudo", "systemctl", "start", "cm4-v3link-healthcheck.timer"], cwd=repo_root)
     except subprocess.CalledProcessError as exc:
         print(f"update failed: {exc}", file=sys.stderr)
         return 2
@@ -31,4 +46,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
