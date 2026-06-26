@@ -52,8 +52,11 @@ Then install the systemd unit from [`systemd/cm4-v3link.service`](./systemd/cm4-
 
 ```bash
 sudo cp systemd/cm4-v3link.service /etc/systemd/system/cm4-v3link.service
+sudo cp systemd/cm4-v3link-healthcheck.service /etc/systemd/system/cm4-v3link-healthcheck.service
+sudo cp systemd/cm4-v3link-healthcheck.timer /etc/systemd/system/cm4-v3link-healthcheck.timer
 sudo systemctl daemon-reload
 sudo systemctl enable --now cm4-v3link
+sudo systemctl enable --now cm4-v3link-healthcheck.timer
 sudo systemctl status cm4-v3link
 ```
 
@@ -80,3 +83,4 @@ If your CM4 login user is not `cm4`, edit the `User=`, `Group=`, `WorkingDirecto
 - `GET /api/version` returns the build label and git sha
 - The home page footer also shows the current build
 - `cm4-v3link-healthcheck` exits non-zero if the API health check fails
+- `cm4-v3link-healthcheck.timer` runs the health check every 5 minutes

@@ -1,0 +1,12 @@
+[Unit]
+Description=CM4 V3Link Camera Health Check
+Wants=cm4-v3link.service
+After=cm4-v3link.service
+
+[Service]
+Type=oneshot
+User=cm4
+Group=cm4
+WorkingDirectory=/home/cm4/cm4-v3link
+ExecStart=/home/cm4/cm4-v3link/.venv/bin/cm4-v3link-healthcheck --require-camera-0
+

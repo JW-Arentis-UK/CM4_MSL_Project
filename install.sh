@@ -14,10 +14,15 @@ source "${ROOT_DIR}/.venv/bin/activate"
 pip install -e "${ROOT_DIR}"
 
 sudo install -m 0644 "${ROOT_DIR}/systemd/cm4-v3link.service" "${SERVICE_FILE}"
+sudo install -m 0644 "${ROOT_DIR}/systemd/cm4-v3link-healthcheck.service" /etc/systemd/system/cm4-v3link-healthcheck.service
+sudo install -m 0644 "${ROOT_DIR}/systemd/cm4-v3link-healthcheck.timer" /etc/systemd/system/cm4-v3link-healthcheck.timer
 sudo systemctl daemon-reload
 sudo systemctl enable --now cm4-v3link
+sudo systemctl enable --now cm4-v3link-healthcheck.timer
 sudo systemctl status --no-pager cm4-v3link
 
 echo
 echo "Health check:"
 echo "  cm4-v3link-healthcheck"
+echo "Timer status:"
+echo "  systemctl status cm4-v3link-healthcheck.timer"

@@ -1,0 +1,12 @@
+[Unit]
+Description=Run CM4 V3Link health checks on a schedule
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=cm4-v3link-healthcheck.service
+
+[Install]
+WantedBy=timers.target
+
