@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cm4-v3link"
-version = "0.1.4"
+version = "0.1.5"
 description = "Raspberry Pi CM4 control tool for Arducam V3Link cameras"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,6 +12,7 @@ dependencies = [
   "fastapi>=0.111",
   "jinja2>=3.1",
   "pydantic>=2.7",
+  "pillow>=10.0",
   "uvicorn[standard]>=0.30",
 ]
 

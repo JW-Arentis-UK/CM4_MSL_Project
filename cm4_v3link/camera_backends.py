@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import os
 from abc import ABC, abstractmethod
+from io import BytesIO
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -14,6 +15,16 @@ from .models import CameraSettings, DetectedCamera
 _PLACEHOLDER_JPEG = base64.b64decode(
     "/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBAQEA8PEA8PDw8PDw8PDw8PDw8QFREWFhURExMYHSggGBolGxMTITEhJSkrLi4uFx8zODMtNygtLisBCgoKDg0OGhAQGy0lICYtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLv/AABEIAAEAAQMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwL/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAHfYf/EABkQAAMBAQEAAAAAAAAAAAAAAAABAhEDIf/aAAgBAQABBQLJzJ0nX//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8BP//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8BP//Z"
 )
+
+try:
+    import numpy as np
+except Exception:  # pragma: no cover - optional dependency
+    np = None  # type: ignore[assignment]
+
+try:
+    from PIL import Image
+except Exception:  # pragma: no cover - optional dependency
+    Image = None  # type: ignore[assignment]
 
 
 @dataclass(slots=True)
@@ -113,6 +124,23 @@ class Picamera2Backend(CameraBackend):
         if controls:
             camera.set_controls(controls)
 
+    def _array_to_jpeg_bytes(self, array: Any) -> bytes | None:
+        if Image is None or np is None:
+            return None
+        try:
+            if array is None:
+                return None
+            image = Image.fromarray(array)
+            if image.mode not in {"RGB", "L"}:
+                image = image.convert("RGB")
+            elif image.mode == "L":
+                image = image.convert("RGB")
+            buffer = BytesIO()
+            image.save(buffer, format="JPEG", quality=90)
+            return buffer.getvalue()
+        except Exception:
+            return None
+
     def apply_settings(self, camera_id: str, settings: CameraSettings) -> None:
         camera = self._get_camera(camera_id)
         self._apply_common_controls(camera, settings)
@@ -142,6 +170,13 @@ class Picamera2Backend(CameraBackend):
         camera = self._get_camera(camera_id)
         self._apply_common_controls(camera, settings)
         try:
+            try:
+                array = camera.capture_array()
+                jpeg_bytes = self._array_to_jpeg_bytes(array)
+                if jpeg_bytes is not None:
+                    return BackendSnapshot(bytes_data=jpeg_bytes)
+            except Exception:
+                pass
             with NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
                 tmp_path = Path(tmp.name)
             try:
@@ -160,4 +195,3 @@ def create_backend() -> CameraBackend:
         return Picamera2Backend()
     except Exception:
         return MockCameraBackend()
-
