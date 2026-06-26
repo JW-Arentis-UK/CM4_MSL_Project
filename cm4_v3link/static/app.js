@@ -47,9 +47,11 @@ function renderSlots() {
 
 function statusClass(status) {
   if (status === "previewing") return "status-previewing";
+  if (status === "ready") return "status-ok";
   if (status === "missing") return "status-missing";
   if (status === "disabled") return "status-disabled";
-  return "status-ok";
+  if (status === "error") return "status-error";
+  return "status-unknown";
 }
 
 function renderCameraCards() {

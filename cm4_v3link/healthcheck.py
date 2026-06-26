@@ -3,8 +3,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
+
+
+def log_watchdog(message: str) -> None:
+    timestamp = datetime.now(timezone.utc).isoformat()
+    print(f"watchdog failed {timestamp} {message}", file=sys.stderr)
 
 
 def fetch(url: str) -> dict:
@@ -32,18 +38,17 @@ def main() -> int:
     try:
         data = fetch(args.url)
     except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
-        print(f"healthcheck failed: {exc}", file=sys.stderr)
+        log_watchdog(f"healthcheck fetch error: {exc}")
         return 2
 
     if not data.get("healthy"):
-        print("healthcheck failed: service reported unhealthy", file=sys.stderr)
+        log_watchdog("service reported unhealthy")
         return 2
 
     detected = data.get("detected_cameras") or []
     if len(detected) < args.min_detected:
-        print(
-            f"healthcheck failed: detected {len(detected)} camera(s), expected at least {args.min_detected}",
-            file=sys.stderr,
+        log_watchdog(
+            f"detected {len(detected)} camera(s), expected at least {args.min_detected}"
         )
         return 2
 
@@ -51,10 +56,7 @@ def main() -> int:
         statuses = data.get("camera_statuses") or {}
         camera_0_status = statuses.get("camera_0")
         if camera_0_status not in {"ready", "previewing", "snapshot-ready"}:
-            print(
-                f"healthcheck failed: camera_0 status is {camera_0_status!r}",
-                file=sys.stderr,
-            )
+            log_watchdog(f"camera_0 status is {camera_0_status!r}")
             return 2
 
     print("healthcheck ok")
