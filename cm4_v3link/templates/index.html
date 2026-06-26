@@ -18,6 +18,7 @@
           <span class="label">Status</span>
           <strong id="overall-status">Loading...</strong>
           <p id="status-summary">Checking camera discovery.</p>
+          <p class="build-line">Build: <span id="build-version">{{ build.label if build else "unknown" }}</span></p>
         </div>
       </header>
 
@@ -80,8 +81,12 @@
           <div id="log-list" class="log-list"></div>
         </article>
       </section>
+
+      <footer class="footer">
+        <span>Build <strong id="footer-build">{{ build.label if build else "unknown" }}</strong></span>
+        <span>API includes `/api/version` and `/api/health` for remote monitoring.</span>
+      </footer>
     </main>
     <script src="/static/app.js"></script>
   </body>
 </html>
-

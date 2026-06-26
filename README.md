@@ -23,6 +23,8 @@ cm4-v3link
 
 The app listens on `http://127.0.0.1:8000` by default.
 
+The current build is exposed in the UI and through `GET /api/version`.
+
 ## Configuration
 
 By default the app stores configuration in `config/cameras.json`.
@@ -55,6 +57,12 @@ sudo systemctl enable --now cm4-v3link
 sudo systemctl status cm4-v3link
 ```
 
+You can also run the installer script instead of typing those steps by hand:
+
+```bash
+bash install.sh
+```
+
 Logs go to the journal:
 
 ```bash
@@ -64,3 +72,9 @@ journalctl -u cm4-v3link -f
 The service is configured to restart automatically and uses the repo-local `config/cameras.json` file for persistent settings.
 
 If your CM4 login user is not `cm4`, edit the `User=`, `Group=`, `WorkingDirectory=`, and `ExecStart=` lines in the unit to match your home folder.
+
+## Monitoring
+
+- `GET /api/health` returns a simple remote health summary
+- `GET /api/version` returns the build label and git sha
+- The home page footer also shows the current build

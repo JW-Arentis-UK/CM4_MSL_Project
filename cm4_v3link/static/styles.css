@@ -78,6 +78,11 @@ h1 {
   align-content: start;
 }
 
+.build-line {
+  margin: 0;
+  color: var(--muted);
+}
+
 .label {
   color: var(--muted);
   font-size: 0.85rem;
@@ -173,6 +178,15 @@ select, input {
 .status-disabled { color: var(--muted); }
 .status-previewing { color: var(--accent); }
 
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -203,5 +217,7 @@ select, input {
   .form {
     grid-template-columns: 1fr;
   }
+  .footer {
+    flex-direction: column;
+  }
 }
-

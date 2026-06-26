@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .camera_backends import BackendSnapshot, CameraBackend, create_backend
+from .build_info import BuildInfo, get_build_info
 from .config import ConfigStore
 from .logging_buffer import LogBuffer
 from .models import AppConfig, CameraRuntimeState, CameraSettings, DetectedCamera, utc_now
@@ -16,14 +17,21 @@ class CameraService:
         config_store: ConfigStore | None = None,
         backend: CameraBackend | None = None,
         log_buffer: LogBuffer | None = None,
+        build_info: BuildInfo | None = None,
     ) -> None:
         self.config_store = config_store or ConfigStore()
         self.backend = backend or create_backend()
         self.log_buffer = log_buffer or LogBuffer()
+        self.build_info = build_info or get_build_info()
         self.config = self.config_store.load()
         self.detected: list[DetectedCamera] = []
         self.runtime_overrides: dict[str, dict[str, Any]] = {}
         self._refresh_discovery()
+        self._log(
+            "info",
+            f"Startup complete build={self.build_info.label} backend={self.backend.__class__.__name__} "
+            f"config={self.config_store.path}",
+        )
 
     def _log(self, level: str, message: str) -> None:
         self.log_buffer.add(level, message)
@@ -161,6 +169,20 @@ class CameraService:
 
     def recent_logs(self) -> list[dict[str, str]]:
         return self.log_buffer.as_list()
+
+    def build_summary(self) -> dict[str, str]:
+        return self.build_info.to_dict()
+
+    def health(self) -> dict[str, Any]:
+        cameras = [self._make_state(slot) for slot in self._slot_order()]
+        return {
+            "healthy": True,
+            "build": self.build_info.to_dict(),
+            "backend": self.backend.__class__.__name__,
+            "config_path": str(self.config_store.path),
+            "detected_count": len(self.detected),
+            "camera_statuses": {camera.slot: camera.status for camera in cameras},
+        }
 
     def preview_frame_bytes(self, slot: str) -> bytes:
         snapshot = self.capture_snapshot(slot)

@@ -4,6 +4,7 @@ const state = {
   previewSlot: "camera_0",
   settingsSlot: "camera_0",
   previewTimer: null,
+  build: null,
 };
 
 const el = (id) => document.getElementById(id);
@@ -114,6 +115,11 @@ async function fetchJson(url, options) {
 
 async function loadStatus() {
   state.status = await fetchJson("/api/status");
+  state.build = state.status.build ?? state.build;
+  if (state.build?.label) {
+    el("build-version").textContent = state.build.label;
+    el("footer-build").textContent = state.build.label;
+  }
   const cameras = cameraList();
   if (!cameras.length) return;
   state.previewSlot = state.previewSlot || cameras[0].slot;
@@ -137,6 +143,15 @@ async function loadLogs() {
     row.className = "card";
     row.textContent = `[${entry.level}] ${entry.timestamp} ${entry.message}`;
     root.appendChild(row);
+  }
+}
+
+async function loadVersion() {
+  const version = await fetchJson("/api/version");
+  state.build = version;
+  if (version?.label) {
+    el("build-version").textContent = version.label;
+    el("footer-build").textContent = version.label;
   }
 }
 
@@ -241,6 +256,7 @@ function wireEvents() {
 
 async function boot() {
   wireEvents();
+  await loadVersion();
   await loadStatus();
   await loadLogs();
   startPreviewTimer();
@@ -255,4 +271,3 @@ boot().catch((error) => {
   el("overall-status").textContent = "Error";
   el("status-summary").textContent = String(error);
 });
-

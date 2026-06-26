@@ -8,21 +8,24 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 
+from .build_info import get_build_info
 from .camera_service import CameraService
 from .config import ConfigStore
 from .models import AppConfig
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="CM4 V3Link Camera Control Tool", version="0.1.0")
+    build_info = get_build_info()
+    app = FastAPI(title="CM4 V3Link Camera Control Tool", version=build_info.label)
     base_dir = Path(__file__).resolve().parent
     templates = Jinja2Templates(directory=str(base_dir / "templates"))
     static_dir = base_dir / "static"
     if static_dir.exists():
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-    service = CameraService(config_store=ConfigStore())
+    service = CameraService(config_store=ConfigStore(), build_info=build_info)
     app.state.service = service
+    app.state.build_info = build_info
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request) -> HTMLResponse:
@@ -31,16 +34,17 @@ def create_app() -> FastAPI:
             {
                 "request": request,
                 "title": "CM4 V3Link Camera Control Tool",
+                "build": build_info.to_dict(),
             },
         )
 
     @app.get("/api/status")
     def api_status() -> dict:
-        return service.get_status()
+        return {**service.get_status(), "build": build_info.to_dict()}
 
     @app.get("/api/cameras")
     def api_cameras() -> dict:
-        return service.get_status()
+        return {**service.get_status(), "build": build_info.to_dict()}
 
     @app.get("/api/cameras/{slot}")
     def api_camera(slot: str) -> dict:
@@ -125,6 +129,14 @@ def create_app() -> FastAPI:
     @app.get("/api/logs")
     def api_logs() -> dict:
         return {"entries": service.recent_logs()}
+
+    @app.get("/api/version")
+    def api_version() -> dict:
+        return build_info.to_dict()
+
+    @app.get("/api/health")
+    def api_health() -> dict:
+        return service.health()
 
     return app
 
