@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import os
 import time
 from abc import ABC, abstractmethod
@@ -11,11 +10,6 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from .models import CameraSettings, DetectedCamera
-
-
-_PLACEHOLDER_JPEG = base64.b64decode(
-    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBAQEA8PEA8PDw8PDw8PDw8PDw8QFREWFhURExMYHSggGBolGxMTITEhJSkrLi4uFx8zODMtNygtLisBCgoKDg0OGhAQGy0lICYtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLv/AABEIAAEAAQMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwL/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAHfYf/EABkQAAMBAQEAAAAAAAAAAAAAAAABAhEDIf/aAAgBAQABBQLJzJ0nX//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8BP//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8BP//Z"
-)
 
 try:
     import numpy as np
@@ -75,7 +69,7 @@ class MockCameraBackend(CameraBackend):
         return None
 
     def capture_snapshot(self, camera_id: str, settings: CameraSettings) -> BackendSnapshot:
-        return BackendSnapshot(bytes_data=_PLACEHOLDER_JPEG)
+        return BackendSnapshot(bytes_data=_make_status_jpeg("Mock camera", camera_id, "preview unavailable"))
 
 
 class Picamera2Backend(CameraBackend):
@@ -145,9 +139,12 @@ class Picamera2Backend(CameraBackend):
 
     def _decorate_jpeg_bytes(self, jpeg_bytes: bytes, title: str, subtitle: str) -> bytes:
         if Image is None or ImageDraw is None:
-            return jpeg_bytes
+            return _make_status_jpeg(title, subtitle, "Pillow unavailable")
         try:
             image = Image.open(BytesIO(jpeg_bytes)).convert("RGB")
+        except Exception:
+            return _make_status_jpeg(title, subtitle, "camera frame unavailable")
+        try:
             draw = ImageDraw.Draw(image)
             width, height = image.size
             draw.rectangle((0, 0, width - 1, height - 1), outline=(102, 194, 255), width=8)
@@ -158,7 +155,7 @@ class Picamera2Backend(CameraBackend):
             image.save(buffer, format="JPEG", quality=90)
             return buffer.getvalue()
         except Exception:
-            return jpeg_bytes
+            return _make_status_jpeg(title, subtitle, "camera frame unavailable")
 
     def apply_settings(self, camera_id: str, settings: CameraSettings) -> None:
         camera = self._get_camera(camera_id)
@@ -246,7 +243,7 @@ class Picamera2Backend(CameraBackend):
         except Exception:
             return BackendSnapshot(
                 bytes_data=self._decorate_jpeg_bytes(
-                    _PLACEHOLDER_JPEG,
+                    _make_status_jpeg(f"CM4 V3Link {camera_id}", "preview fallback", "capture failed"),
                     f"CM4 V3Link {camera_id}",
                     "preview fallback image",
                 )
@@ -258,3 +255,20 @@ def create_backend() -> CameraBackend:
         return Picamera2Backend()
     except Exception:
         return MockCameraBackend()
+
+
+def _make_status_jpeg(title: str, subtitle: str, detail: str, size: tuple[int, int] = (1280, 720)) -> bytes:
+    if Image is None or ImageDraw is None:
+        raise RuntimeError("Pillow is required to build status images.")
+    image = Image.new("RGB", size, (10, 18, 28))
+    draw = ImageDraw.Draw(image)
+    width, height = size
+    draw.rectangle((0, 0, width - 1, height - 1), outline=(102, 194, 255), width=10)
+    draw.rounded_rectangle((48, 48, width - 48, height - 48), radius=28, fill=(16, 28, 42))
+    draw.rounded_rectangle((72, 72, width - 72, 220), radius=22, fill=(8, 17, 27))
+    draw.text((96, 100), title, fill=(236, 244, 255))
+    draw.text((96, 154), subtitle, fill=(125, 240, 192))
+    draw.text((96, 620), detail, fill=(153, 171, 194))
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=92)
+    return buffer.getvalue()
