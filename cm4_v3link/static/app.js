@@ -4,7 +4,6 @@ const state = {
   previewSlot: "camera_0",
   settingsSlot: "camera_0",
   previewTimer: null,
-  previewLoading: false,
   build: null,
 };
 
@@ -18,10 +17,34 @@ function slotToState(slot) {
   return cameraList().find((camera) => camera.slot === slot);
 }
 
-function setPreviewImage(src) {
-  state.previewLoading = true;
-  el("health-summary").textContent = "loading preview frame...";
+function previewPlaceholder(message) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+      <defs>
+        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#0b1624" />
+          <stop offset="100%" stop-color="#121f31" />
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" rx="28" fill="url(#g)" />
+      <rect x="110" y="120" width="1380" height="660" rx="24" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4" />
+      <text x="800" y="430" fill="#ecf4ff" font-family="Segoe UI, Arial, sans-serif" font-size="58" text-anchor="middle">${message}</text>
+    </svg>
+  `.trim();
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function setPreviewStatus(message) {
+  el("preview-status").textContent = message;
+}
+
+function setPreviewImage(src, statusMessage = "loading preview frame...") {
+  setPreviewStatus(statusMessage);
   el("preview-image").src = src;
+}
+
+function showPreviewPlaceholder(message) {
+  el("preview-image").src = previewPlaceholder(message);
 }
 
 function renderSlots() {
@@ -81,9 +104,7 @@ function renderHealthSummary(health) {
   const backend = health?.backend ?? "unknown";
   const configPath = health?.config_path ?? "unknown";
   const camera0 = health?.camera_statuses?.camera_0 ?? "unknown";
-  if (!state.previewLoading) {
-    el("health-summary").textContent = `backend ${backend}, ${detected} detected, camera_0 ${camera0}`;
-  }
+  el("health-summary").textContent = `backend ${backend}, ${detected} detected, camera_0 ${camera0}`;
   el("status-summary").textContent = `${cameraList()
     .map((camera) => `${camera.slot}: ${camera.status}`)
     .join(" | ")} | config ${configPath}`;
@@ -184,15 +205,14 @@ async function loadHealth() {
 function wirePreviewEvents() {
   const preview = el("preview-image");
   preview.addEventListener("load", () => {
-    state.previewLoading = false;
     const slot = el("preview-slot").value;
     const camera = slotToState(slot);
     const label = camera?.detected_name ?? slot ?? "camera";
-    el("health-summary").textContent = `preview frame loaded from ${label}`;
+    setPreviewStatus(`frame loaded from ${label}`);
   });
   preview.addEventListener("error", () => {
-    state.previewLoading = false;
-    el("health-summary").textContent = "preview frame failed to load";
+    setPreviewStatus("preview frame failed to load");
+    showPreviewPlaceholder("Preview unavailable");
   });
 }
 
@@ -215,6 +235,8 @@ function stopPreviewTimer() {
 async function startPreview() {
   const slot = el("preview-slot").value;
   state.previewSlot = slot;
+  setPreviewStatus(`starting preview for ${slot}...`);
+  showPreviewPlaceholder("Loading preview...");
   await fetchJson(`/api/cameras/${slot}/preview/start`, { method: "POST" });
   setPreviewImage(`/api/cameras/${slot}/preview/frame?ts=${Date.now()}`);
   startPreviewTimer();
@@ -226,19 +248,26 @@ async function stopPreview() {
   state.previewSlot = slot;
   await fetchJson(`/api/cameras/${slot}/preview/stop`, { method: "POST" });
   stopPreviewTimer();
+  setPreviewStatus("preview stopped");
+  showPreviewPlaceholder("Preview stopped");
   await loadStatus();
 }
 
 async function takeSnapshot() {
   const slot = el("preview-slot").value;
   state.previewSlot = slot;
+  setPreviewStatus(`capturing snapshot from ${slot}...`);
+  showPreviewPlaceholder("Capturing snapshot...");
   const response = await fetch(`/api/cameras/${slot}/snapshot`, { method: "POST" });
   if (!response.ok) {
+    setPreviewStatus("snapshot failed");
+    showPreviewPlaceholder("Snapshot failed");
     throw new Error(await response.text());
   }
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
-  setPreviewImage(url);
+  setPreviewImage(url, `snapshot loaded from ${slot}`);
+  setPreviewStatus(`snapshot loaded from ${slot}`);
 }
 
 async function applySettings() {
@@ -298,6 +327,7 @@ function wireEvents() {
 async function boot() {
   wirePreviewEvents();
   wireEvents();
+  showPreviewPlaceholder("Waiting for preview...");
   await loadVersion();
   await loadStatus();
   await loadHealth();
