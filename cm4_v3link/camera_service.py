@@ -37,6 +37,18 @@ class CameraService:
     def _log(self, level: str, message: str) -> None:
         self.log_buffer.add(level, message)
 
+    def _snapshot_summary(self, snapshot: BackendSnapshot) -> str:
+        if snapshot.bytes_data is not None:
+            byte_length = len(snapshot.bytes_data)
+        elif snapshot.path is not None:
+            try:
+                byte_length = snapshot.path.stat().st_size
+            except Exception:
+                byte_length = 0
+        else:
+            byte_length = 0
+        return f"source={snapshot.source} detail={snapshot.detail} bytes={byte_length}"
+
     def _slot_order(self) -> list[str]:
         return list(self.config.cameras.keys())
 
@@ -160,7 +172,9 @@ class CameraService:
         state = self.get_camera(slot)
         if not state.detected_id:
             raise RuntimeError("Camera is not detected.")
+        self._log("info", f"{slot}: snapshot requested.")
         snapshot = self.backend.capture_snapshot(state.detected_id, state.settings)
+        self._log("info", f"{slot}: snapshot result {self._snapshot_summary(snapshot)}")
         self.runtime_overrides[slot] = {
             "snapshot_ready": True,
             "last_snapshot_at": utc_now(),
@@ -174,6 +188,7 @@ class CameraService:
         state = self.get_camera(slot)
         if not state.detected_id:
             raise RuntimeError("Camera is not detected.")
+        self._log("info", f"{slot}: debug preview requested.")
         snapshot = self.backend.capture_snapshot(state.detected_id, state.settings)
         data = snapshot.bytes_data
         if data is None and snapshot.path is not None:
@@ -235,8 +250,10 @@ class CameraService:
         }
 
     def preview_frame_bytes(self, slot: str) -> bytes:
+        self._log("info", f"{slot}: preview frame requested.")
         snapshot = self.capture_snapshot(slot)
         if snapshot.bytes_data is not None:
+            self._log("info", f"{slot}: preview frame served {self._snapshot_summary(snapshot)}")
             return snapshot.bytes_data
         if snapshot.path is None:
             raise RuntimeError("Snapshot failed.")
@@ -245,4 +262,8 @@ class CameraService:
             Path(snapshot.path).unlink(missing_ok=True)
         except Exception:
             pass
+        self._log(
+            "info",
+            f"{slot}: preview frame served from path source={snapshot.source} detail={snapshot.detail} bytes={len(data)}",
+        )
         return data
