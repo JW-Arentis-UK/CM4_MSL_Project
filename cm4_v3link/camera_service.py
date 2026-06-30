@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -168,6 +169,41 @@ class CameraService:
         }
         self._log("info", f"{slot}: snapshot captured.")
         return snapshot
+
+    def preview_debug(self, slot: str) -> dict[str, Any]:
+        state = self.get_camera(slot)
+        if not state.detected_id:
+            raise RuntimeError("Camera is not detected.")
+        snapshot = self.backend.capture_snapshot(state.detected_id, state.settings)
+        data = snapshot.bytes_data
+        if data is None and snapshot.path is not None:
+            data = Path(snapshot.path).read_bytes()
+            try:
+                Path(snapshot.path).unlink(missing_ok=True)
+            except Exception:
+                pass
+        byte_length = len(data) if data is not None else 0
+        digest = sha256(data).hexdigest()[:12] if data is not None else None
+        info = {
+            "ok": True,
+            "slot": slot,
+            "backend": self.backend.__class__.__name__,
+            "state": state.to_dict(),
+            "snapshot": {
+                "source": snapshot.source,
+                "detail": snapshot.detail,
+                "content_type": snapshot.content_type,
+                "has_bytes": snapshot.bytes_data is not None,
+                "has_path": snapshot.path is not None,
+                "byte_length": byte_length,
+                "sha256": digest,
+            },
+        }
+        self._log(
+            "info",
+            f"{slot}: debug preview source={snapshot.source} detail={snapshot.detail} bytes={byte_length}",
+        )
+        return info
 
     def update_slot_settings(self, slot: str, settings_data: dict[str, Any]) -> CameraRuntimeState:
         if slot not in self.config.cameras:

@@ -113,8 +113,17 @@ def create_app() -> FastAPI:
             headers={
                 "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
                 "Pragma": "no-cache",
-            },
-        )
+                },
+            )
+
+    @app.get("/api/cameras/{slot}/preview/debug")
+    def api_camera_preview_debug(slot: str) -> dict:
+        try:
+            return service.preview_debug(slot)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Unknown camera slot.") from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @app.post("/api/cameras/{slot}/preview/start")
     def api_preview_start(slot: str) -> dict:

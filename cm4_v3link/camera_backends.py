@@ -29,6 +29,8 @@ class BackendSnapshot:
     path: Path | None = None
     bytes_data: bytes | None = None
     content_type: str = "image/jpeg"
+    source: str = "unknown"
+    detail: str = ""
 
 
 class CameraBackend(ABC):
@@ -69,7 +71,11 @@ class MockCameraBackend(CameraBackend):
         return None
 
     def capture_snapshot(self, camera_id: str, settings: CameraSettings) -> BackendSnapshot:
-        return BackendSnapshot(bytes_data=_make_status_jpeg("Mock camera", camera_id, "preview unavailable"))
+        return BackendSnapshot(
+            bytes_data=_make_status_jpeg("Mock camera", camera_id, "preview unavailable"),
+            source="mock",
+            detail="preview unavailable",
+        )
 
 
 class Picamera2Backend(CameraBackend):
@@ -201,7 +207,9 @@ class Picamera2Backend(CameraBackend):
                                 jpeg_bytes,
                                 label,
                                 "captured_request frame",
-                            )
+                            ),
+                            source="captured_request",
+                            detail="captured_request frame",
                         )
             except Exception:
                 pass
@@ -216,7 +224,9 @@ class Picamera2Backend(CameraBackend):
                                 jpeg_bytes,
                                 label,
                                 "capture_array frame",
-                            )
+                            ),
+                            source="capture_array",
+                            detail="capture_array frame",
                         )
             except Exception:
                 pass
@@ -234,7 +244,9 @@ class Picamera2Backend(CameraBackend):
                         data,
                         label,
                         "capture_file frame",
-                    )
+                    ),
+                    source="capture_file",
+                    detail="capture_file frame",
                 )
             except Exception:
                 if tmp_path.exists():
@@ -246,7 +258,9 @@ class Picamera2Backend(CameraBackend):
                     _make_status_jpeg(f"CM4 V3Link {camera_id}", "preview fallback", "capture failed"),
                     f"CM4 V3Link {camera_id}",
                     "preview fallback image",
-                )
+                ),
+                source="fallback",
+                detail="capture failed",
             )
 
 

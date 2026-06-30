@@ -270,6 +270,18 @@ async function takeSnapshot() {
   setPreviewStatus(`snapshot loaded from ${slot}`);
 }
 
+async function debugPreview() {
+  const slot = el("preview-slot").value;
+  state.previewSlot = slot;
+  setPreviewStatus(`debugging frame for ${slot}...`);
+  const data = await fetchJson(`/api/cameras/${slot}/preview/debug`);
+  const snap = data.snapshot || {};
+  const summary = `${snap.source || "unknown"} | ${snap.byte_length ?? 0} bytes | ${snap.detail || "no detail"}`;
+  setPreviewStatus(summary);
+  showPreviewPlaceholder(`Debug: ${snap.source || "unknown"}`);
+  await loadLogs();
+}
+
 async function applySettings() {
   const slot = el("settings-slot").value;
   state.settingsSlot = slot;
@@ -316,6 +328,7 @@ function wireEvents() {
   el("start-preview").addEventListener("click", () => startPreview().catch(alert));
   el("stop-preview").addEventListener("click", () => stopPreview().catch(alert));
   el("snapshot").addEventListener("click", () => takeSnapshot().catch(alert));
+  el("debug-preview").addEventListener("click", () => debugPreview().catch(alert));
   el("apply-settings").addEventListener("click", (event) => {
     event.preventDefault();
     applySettings().catch(alert);
