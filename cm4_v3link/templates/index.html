@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v={{ build.label if build else 'unknown' }}" />
   </head>
   <body>
     <main class="shell">
@@ -89,6 +89,6 @@
         <span>API includes `/api/version` and `/api/health` for remote monitoring.</span>
       </footer>
     </main>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v={{ build.label if build else 'unknown' }}"></script>
   </body>
 </html>

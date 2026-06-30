@@ -137,10 +137,19 @@ class CameraService:
         state = self.get_camera(slot)
         if state.detected_id:
             self.backend.stop_preview(state.detected_id)
+        if not state.enabled:
+            status = "disabled"
+            message = "Camera is disabled in config."
+        elif state.detected:
+            status = "ready"
+            message = "Camera detected and ready."
+        else:
+            status = "missing"
+            message = "No matching camera detected."
         self.runtime_overrides[slot] = {
             "previewing": False,
-            "status": state.status,
-            "message": "Preview stopped.",
+            "status": status,
+            "message": message,
             "last_error": None,
         }
         self._log("info", f"{slot}: preview stopped.")
