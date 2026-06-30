@@ -125,16 +125,15 @@ class Picamera2Backend(CameraBackend):
         if controls:
             camera.set_controls(controls)
 
-    def _array_to_jpeg_bytes(self, array: Any) -> bytes | None:
+    def _image_to_jpeg_bytes(self, image: Any) -> bytes | None:
         if Image is None or np is None:
             return None
         try:
-            if array is None:
+            if image is None:
                 return None
-            image = Image.fromarray(array)
-            if image.mode not in {"RGB", "L"}:
+            if hasattr(image, "mode") and image.mode not in {"RGB", "L"}:
                 image = image.convert("RGB")
-            elif image.mode == "L":
+            elif hasattr(image, "mode") and image.mode == "L":
                 image = image.convert("RGB")
             buffer = BytesIO()
             image.save(buffer, format="JPEG", quality=90)
@@ -173,10 +172,23 @@ class Picamera2Backend(CameraBackend):
         self._apply_common_controls(camera, settings)
         try:
             try:
+                with camera.captured_request() as request:
+                    try:
+                        image = request.make_image("main")
+                    except Exception:
+                        image = request.make_image()
+                    jpeg_bytes = self._image_to_jpeg_bytes(image)
+                    if jpeg_bytes is not None:
+                        return BackendSnapshot(bytes_data=jpeg_bytes)
+            except Exception:
+                pass
+            try:
                 array = camera.capture_array("main")
-                jpeg_bytes = self._array_to_jpeg_bytes(array)
-                if jpeg_bytes is not None:
-                    return BackendSnapshot(bytes_data=jpeg_bytes)
+                if array is not None and Image is not None:
+                    image = Image.fromarray(array)
+                    jpeg_bytes = self._image_to_jpeg_bytes(image)
+                    if jpeg_bytes is not None:
+                        return BackendSnapshot(bytes_data=jpeg_bytes)
             except Exception:
                 pass
             with NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:

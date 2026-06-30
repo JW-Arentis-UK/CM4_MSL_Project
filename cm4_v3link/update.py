@@ -18,11 +18,16 @@ def main() -> int:
         return 2
 
     try:
+        print("update: stopping healthcheck timer")
         run(["sudo", "systemctl", "stop", "cm4-v3link-healthcheck.timer"], cwd=repo_root)
+        print("update: pulling latest code")
         run(["git", "pull"], cwd=repo_root)
+        print("update: reinstalling package")
         run([str(venv_python), "-m", "pip", "install", "-e", str(repo_root)], cwd=repo_root)
+        print("update: restarting service")
         run(["sudo", "systemctl", "restart", "cm4-v3link"], cwd=repo_root)
 
+        print("update: waiting for service to become active")
         for _ in range(30):
             result = subprocess.run(
                 ["systemctl", "is-active", "--quiet", "cm4-v3link"],
@@ -35,6 +40,7 @@ def main() -> int:
             print("update failed: cm4-v3link did not become active", file=sys.stderr)
             return 2
 
+        print("update: restarting healthcheck timer")
         run(["sudo", "systemctl", "start", "cm4-v3link-healthcheck.timer"], cwd=repo_root)
     except subprocess.CalledProcessError as exc:
         print(f"update failed: {exc}", file=sys.stderr)

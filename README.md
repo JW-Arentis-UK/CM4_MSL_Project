@@ -85,3 +85,4 @@ If your CM4 login user is not `cm4`, edit the `User=`, `Group=`, `WorkingDirecto
 - `cm4-v3link-healthcheck` exits non-zero if the API health check fails
 - `cm4-v3link-healthcheck.timer` runs the health check every 5 minutes
 - `cm4-v3link-update` does `git pull`, reinstalls, and restarts the service
+- `update.sh` is a shell wrapper that prints update progress without needing PATH setup
