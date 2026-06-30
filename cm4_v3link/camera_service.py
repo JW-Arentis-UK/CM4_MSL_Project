@@ -173,7 +173,11 @@ class CameraService:
         if not state.detected_id:
             raise RuntimeError("Camera is not detected.")
         self._log("info", f"{slot}: snapshot requested.")
-        snapshot = self.backend.capture_snapshot(state.detected_id, state.settings)
+        try:
+            snapshot = self.backend.capture_snapshot(state.detected_id, state.settings)
+        except Exception as exc:
+            self._log("error", f"{slot}: snapshot failed {exc}")
+            raise
         self._log("info", f"{slot}: snapshot result {self._snapshot_summary(snapshot)}")
         self.runtime_overrides[slot] = {
             "snapshot_ready": True,
@@ -189,7 +193,11 @@ class CameraService:
         if not state.detected_id:
             raise RuntimeError("Camera is not detected.")
         self._log("info", f"{slot}: debug preview requested.")
-        snapshot = self.backend.capture_snapshot(state.detected_id, state.settings)
+        try:
+            snapshot = self.backend.capture_snapshot(state.detected_id, state.settings)
+        except Exception as exc:
+            self._log("error", f"{slot}: debug preview failed {exc}")
+            raise
         data = snapshot.bytes_data
         if data is None and snapshot.path is not None:
             data = Path(snapshot.path).read_bytes()
@@ -251,11 +259,16 @@ class CameraService:
 
     def preview_frame_bytes(self, slot: str) -> bytes:
         self._log("info", f"{slot}: preview frame requested.")
-        snapshot = self.capture_snapshot(slot)
+        try:
+            snapshot = self.capture_snapshot(slot)
+        except Exception as exc:
+            self._log("error", f"{slot}: preview frame failed {exc}")
+            raise
         if snapshot.bytes_data is not None:
             self._log("info", f"{slot}: preview frame served {self._snapshot_summary(snapshot)}")
             return snapshot.bytes_data
         if snapshot.path is None:
+            self._log("error", f"{slot}: preview frame failed snapshot path missing")
             raise RuntimeError("Snapshot failed.")
         data = Path(snapshot.path).read_bytes()
         try:
