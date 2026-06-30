@@ -24,8 +24,10 @@ except Exception:  # pragma: no cover - optional dependency
 
 try:
     from PIL import Image
+    from PIL import ImageDraw
 except Exception:  # pragma: no cover - optional dependency
     Image = None  # type: ignore[assignment]
+    ImageDraw = None  # type: ignore[assignment]
 
 
 @dataclass(slots=True)
@@ -141,6 +143,23 @@ class Picamera2Backend(CameraBackend):
         except Exception:
             return None
 
+    def _decorate_jpeg_bytes(self, jpeg_bytes: bytes, title: str, subtitle: str) -> bytes:
+        if Image is None or ImageDraw is None:
+            return jpeg_bytes
+        try:
+            image = Image.open(BytesIO(jpeg_bytes)).convert("RGB")
+            draw = ImageDraw.Draw(image)
+            width, height = image.size
+            draw.rectangle((0, 0, width - 1, height - 1), outline=(102, 194, 255), width=8)
+            draw.rounded_rectangle((24, 24, min(width - 24, 760), 170), radius=18, fill=(8, 17, 27))
+            draw.text((48, 44), title, fill=(236, 244, 255))
+            draw.text((48, 94), subtitle, fill=(125, 240, 192))
+            buffer = BytesIO()
+            image.save(buffer, format="JPEG", quality=90)
+            return buffer.getvalue()
+        except Exception:
+            return jpeg_bytes
+
     def apply_settings(self, camera_id: str, settings: CameraSettings) -> None:
         camera = self._get_camera(camera_id)
         self._apply_common_controls(camera, settings)
@@ -171,6 +190,7 @@ class Picamera2Backend(CameraBackend):
         camera = self._get_camera(camera_id)
         self._apply_common_controls(camera, settings)
         try:
+            label = f"CM4 V3Link {camera_id}"
             try:
                 with camera.captured_request() as request:
                     try:
@@ -179,7 +199,13 @@ class Picamera2Backend(CameraBackend):
                         image = request.make_image()
                     jpeg_bytes = self._image_to_jpeg_bytes(image)
                     if jpeg_bytes is not None:
-                        return BackendSnapshot(bytes_data=jpeg_bytes)
+                        return BackendSnapshot(
+                            bytes_data=self._decorate_jpeg_bytes(
+                                jpeg_bytes,
+                                label,
+                                "captured_request frame",
+                            )
+                        )
             except Exception:
                 pass
             try:
@@ -188,20 +214,43 @@ class Picamera2Backend(CameraBackend):
                     image = Image.fromarray(array)
                     jpeg_bytes = self._image_to_jpeg_bytes(image)
                     if jpeg_bytes is not None:
-                        return BackendSnapshot(bytes_data=jpeg_bytes)
+                        return BackendSnapshot(
+                            bytes_data=self._decorate_jpeg_bytes(
+                                jpeg_bytes,
+                                label,
+                                "capture_array frame",
+                            )
+                        )
             except Exception:
                 pass
             with NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
                 tmp_path = Path(tmp.name)
             try:
                 camera.capture_file(str(tmp_path))
-                return BackendSnapshot(path=tmp_path)
+                data = tmp_path.read_bytes()
+                try:
+                    tmp_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                return BackendSnapshot(
+                    bytes_data=self._decorate_jpeg_bytes(
+                        data,
+                        label,
+                        "capture_file frame",
+                    )
+                )
             except Exception:
                 if tmp_path.exists():
                     tmp_path.unlink(missing_ok=True)
                 raise
         except Exception:
-            return BackendSnapshot(bytes_data=_PLACEHOLDER_JPEG)
+            return BackendSnapshot(
+                bytes_data=self._decorate_jpeg_bytes(
+                    _PLACEHOLDER_JPEG,
+                    f"CM4 V3Link {camera_id}",
+                    "preview fallback image",
+                )
+            )
 
 
 def create_backend() -> CameraBackend:
