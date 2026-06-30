@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import os
+import time
 from abc import ABC, abstractmethod
 from io import BytesIO
 from dataclasses import dataclass
@@ -148,12 +149,13 @@ class Picamera2Backend(CameraBackend):
     def start_preview(self, camera_id: str, settings: CameraSettings) -> None:
         camera = self._get_camera(camera_id)
         try:
-            camera.configure(camera.create_preview_configuration())
+            camera.configure(camera.create_preview_configuration(main={"format": "RGB888"}))
         except Exception:
             pass
         self._apply_common_controls(camera, settings)
         try:
             camera.start()
+            time.sleep(0.2)
         except Exception:
             pass
 
@@ -171,7 +173,7 @@ class Picamera2Backend(CameraBackend):
         self._apply_common_controls(camera, settings)
         try:
             try:
-                array = camera.capture_array()
+                array = camera.capture_array("main")
                 jpeg_bytes = self._array_to_jpeg_bytes(array)
                 if jpeg_bytes is not None:
                     return BackendSnapshot(bytes_data=jpeg_bytes)
