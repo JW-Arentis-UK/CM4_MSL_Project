@@ -5,6 +5,7 @@ const state = {
   settingsSlot: "camera_0",
   previewTimer: null,
   build: null,
+  logFilter: "debug",
 };
 
 const el = (id) => document.getElementById(id);
@@ -99,6 +100,32 @@ function renderCameraCards() {
   }
 }
 
+function logMatchesFilter(entry, filter) {
+  const level = String(entry.level || "").toUpperCase();
+  const message = String(entry.message || "");
+  const haystack = `${level} ${message}`.toLowerCase();
+  if (filter === "all") return true;
+  if (filter === "errors") return level === "ERROR" || level === "WARNING" || haystack.includes("fail");
+  if (filter === "preview") {
+    return haystack.includes("preview") || haystack.includes("snapshot") || haystack.includes("debug");
+  }
+  if (filter === "debug") {
+    return (
+      haystack.includes("preview") ||
+      haystack.includes("snapshot") ||
+      haystack.includes("debug") ||
+      level === "ERROR" ||
+      level === "WARNING"
+    );
+  }
+  return true;
+}
+
+function formatLogText(entries) {
+  if (!entries.length) return "No log entries matched the filter.";
+  return entries.map((entry) => `[${entry.level}] ${entry.timestamp} ${entry.message}`).join("\n");
+}
+
 function renderHealthSummary(health) {
   const detected = health?.detected_cameras?.length ?? 0;
   const backend = health?.backend ?? "unknown";
@@ -175,14 +202,20 @@ async function loadStatus() {
 
 async function loadLogs() {
   const data = await fetchJson("/api/logs");
+  const filter = el("log-filter")?.value || state.logFilter;
+  state.logFilter = filter;
+  const entries = (data.entries || []).filter((entry) => logMatchesFilter(entry, filter));
   const root = el("log-list");
   root.innerHTML = "";
-  for (const entry of data.entries || []) {
+  for (const entry of entries) {
     const row = document.createElement("div");
     row.className = "card";
     row.textContent = `[${entry.level}] ${entry.timestamp} ${entry.message}`;
     root.appendChild(row);
   }
+  const debugText = formatLogText(entries);
+  el("log-text").value = debugText;
+  el("log-count").textContent = `${entries.length} line${entries.length === 1 ? "" : "s"}`;
 }
 
 async function loadVersion() {
@@ -335,6 +368,22 @@ function wireEvents() {
   });
   el("save-config").addEventListener("click", () => saveConfig().catch(alert));
   el("refresh-logs").addEventListener("click", () => loadLogs().catch(alert));
+  el("copy-debug-log").addEventListener("click", async () => {
+    const textArea = el("log-text");
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textArea.value);
+      } else {
+        throw new Error("Clipboard API unavailable");
+      }
+      setPreviewStatus("debug log copied");
+    } catch (error) {
+      textArea.focus();
+      textArea.select();
+      setPreviewStatus("debug log selected, press Ctrl+C");
+    }
+  });
+  el("log-filter").addEventListener("change", () => loadLogs().catch(alert));
 }
 
 async function boot() {

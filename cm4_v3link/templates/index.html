@@ -79,9 +79,25 @@
         <article class="panel">
           <div class="panel-head">
             <h2>Logs</h2>
-            <button id="refresh-logs" class="secondary">Refresh</button>
+            <div class="panel-tools">
+              <select id="log-filter" class="log-filter">
+                <option value="debug" selected>Debug</option>
+                <option value="preview">Preview</option>
+                <option value="errors">Errors</option>
+                <option value="all">All</option>
+              </select>
+              <button id="refresh-logs" class="secondary">Refresh</button>
+              <button id="copy-debug-log" class="secondary">Copy text</button>
+            </div>
           </div>
           <div id="log-list" class="log-list"></div>
+          <div class="debug-box">
+            <div class="debug-box-head">
+              <span>Copy/paste debug text</span>
+              <span id="log-count">0 lines</span>
+            </div>
+            <textarea id="log-text" readonly spellcheck="false"></textarea>
+          </div>
         </article>
       </section>
 
